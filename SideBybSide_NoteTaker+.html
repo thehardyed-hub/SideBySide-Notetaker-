@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  :root {
+    --bg:#f9f9f7;--surface:#fff;--surface2:#f5f5f2;--border:#e0e0d8;
+    --text:#1a1a1a;--text2:#555;--text3:#999;
+    --sidebar-bg:#2e2e2e;--sidebar-text:#ccc;--sidebar-active:#3a3a3a;
+    --thead-bg:#3a3a3a;
+    --row-odd-bg:#eef3fb;--row-odd-border:#3a6bc4;--row-odd-note-bg:#d9e6f7;--row-odd-note-text:#3a6bc4;
+    --row-even-bg:#fdf6e3;--row-even-border:#c4a43a;--row-even-note-bg:#f0e2b8;--row-even-note-text:#8a5e00;
+    --sum-col-bg:#f9f9f7;--sum-note-bg:#f0f0ec;--sum-note-border:#ccc;
+    --cs-item-bg:#f7f7f4;--ref-bg:#fff;--ref-tabs-bg:#f5f5f2;
+    --toggle-bg:#e0e0d8;--toggle-knob:#fff;
+  }
+  [data-theme="dark"] {
+    --bg:#18181b;--surface:#27272a;--surface2:#1f1f22;--border:#3f3f46;
+    --text:#f4f4f5;--text2:#a1a1aa;--text3:#71717a;
+    --sidebar-bg:#111113;--sidebar-text:#a1a1aa;--sidebar-active:#27272a;
+    --thead-bg:#111113;
+    --row-odd-bg:#1e2535;--row-odd-border:#4a7bd4;--row-odd-note-bg:#1a2840;--row-odd-note-text:#7aaaf0;
+    --row-even-bg:#272214;--row-even-border:#c4a43a;--row-even-note-bg:#2e2510;--row-even-note-text:#d4a850;
+    --sum-col-bg:#27272a;--sum-note-bg:#323236;--sum-note-border:#52525b;
+    --cs-item-bg:#323236;--ref-bg:#27272a;--ref-tabs-bg:#1f1f22;
+    --toggle-bg:#4a7bd4;--toggle-knob:#fff;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;transition:background .2s,color .2s;}
+
+  /* Topbar */
+  .topbar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--thead-bg);z-index:300;display:flex;align-items:center;justify-content:flex-end;padding:0 16px;gap:10px;}
+  .topbar-label{font-size:12px;color:#aaa;}
+  .theme-toggle{display:flex;align-items:center;gap:7px;background:none;border:none;cursor:pointer;padding:0;}
+  .toggle-track{width:36px;height:20px;border-radius:10px;background:var(--toggle-bg);position:relative;transition:background .2s;flex-shrink:0;}
+  .toggle-knob{width:14px;height:14px;border-radius:50%;background:var(--toggle-knob);position:absolute;top:3px;left:3px;transition:transform .2s;}
+  [data-theme="dark"] .toggle-knob{transform:translateX(16px);}
+  .toggle-icon{font-size:14px;}
+
+  /* Sidebar */
+  .sidebar{width:160px;flex-shrink:0;background:var(--sidebar-bg);display:flex;flex-direction:column;position:sticky;top:44px;height:calc(100vh - 44px);overflow:hidden;transition:width .22s ease;}
+  .sidebar.collapsed{width:40px;}
+  .sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:14px 10px 10px 16px;flex-shrink:0;min-height:44px;}
+  .sidebar-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;white-space:nowrap;overflow:hidden;transition:opacity .15s;}
+  .sidebar.collapsed .sidebar-title{opacity:0;pointer-events:none;}
+  .sidebar-toggle{background:none;border:none;color:#888;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;flex-shrink:0;}
+  .sidebar-toggle:hover{color:#fff;}
+  .sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:4px 0;overflow-y:auto;flex:1;}
+  .sidebar-btn{background:none;border:none;color:var(--sidebar-text);font-family:inherit;font-size:12px;font-weight:500;text-align:left;padding:10px 16px;cursor:pointer;border-left:3px solid transparent;transition:background .15s;line-height:1.4;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:8px;}
+  .sidebar-btn:hover{background:#3a3a3a;color:#fff;}
+  .sidebar-btn.active{background:var(--sidebar-active);color:#fff;border-left-color:#5b8dee;}
+  .sidebar-btn .btn-icon{flex-shrink:0;font-size:14px;}
+  .sidebar-btn .btn-label{overflow:hidden;transition:opacity .15s;white-space:nowrap;}
+  .sidebar.collapsed .sidebar-btn .btn-label{opacity:0;pointer-events:none;}
+  .sidebar.collapsed .sidebar-btn{justify-content:center;padding:10px 0;border-left:none;}
+
+  /* Calculator */
+  .calc-wrap{padding:8px;margin-top:auto;border-top:1px solid #3a3a3a;flex-shrink:0;}
+  .calc-display{background:#111;color:#fff;border-radius:6px;padding:6px 8px;text-align:right;margin-bottom:6px;overflow:hidden;}
+  .calc-expr{font-size:10px;color:#888;min-height:14px;word-break:break-all;}
+  .calc-result{font-size:18px;font-weight:700;min-height:24px;word-break:break-all;}
+  .calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+  .calc-btn{background:#3a3a3a;color:#eee;border:none;border-radius:5px;padding:7px 2px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:background .1s;}
+  .calc-btn:hover{background:#505050;}
+  .calc-btn.op{background:#5b4a1e;color:#f4c430;}
+  .calc-btn.op:hover{background:#7a6428;}
+  .calc-btn.eq{background:#1e4a5b;color:#5bbdf4;}
+  .calc-btn.eq:hover{background:#28607a;}
+  .calc-btn.clr{background:#4a1e1e;color:#f45b5b;}
+  .calc-btn.clr:hover{background:#6a2828;}
+  .sidebar.collapsed .calc-wrap{display:none;}
+
+  /* Main */
+  .main{flex:1;padding:24px;padding-top:68px;min-width:0;}
+  h1{font-size:18px;font-weight:600;margin-bottom:16px;}
+
+  /* Table */
+  table{width:100%;border-collapse:separate;border-spacing:0 6px;}
+  thead{background:var(--thead-bg);}
+  th{font-size:13px;font-weight:600;padding:10px 12px;text-align:left;color:#eee;}
+  th:first-child{border-radius:8px 0 0 8px;}
+  th:last-child{border-radius:0 8px 8px 0;}
+  th.center{text-align:center;}
+  td{padding:8px 12px;vertical-align:top;}
+  tbody tr:nth-child(odd)  td{background:var(--row-odd-bg);border-top:2px solid var(--row-odd-border);border-bottom:2px solid var(--row-odd-border);}
+  tbody tr:nth-child(even) td{background:var(--row-even-bg);border-top:2px solid var(--row-even-border);border-bottom:2px solid var(--row-even-border);}
+  tbody tr:nth-child(odd)  td:first-child{border-left:3px solid var(--row-odd-border);border-radius:4px 0 0 4px;}
+  tbody tr:nth-child(even) td:first-child{border-left:3px solid var(--row-even-border);border-radius:4px 0 0 4px;}
+  tbody tr:nth-child(odd)  td:last-child{border-right:3px solid var(--row-odd-border);border-radius:0 4px 4px 0;}
+  tbody tr:nth-child(even) td:last-child{border-right:3px solid var(--row-even-border);border-radius:0 4px 4px 0;}
+
+  .notes-input{width:100%;border:1.5px solid #c0c8d8;background:var(--surface);border-radius:6px;font-size:14px;color:var(--text);padding:6px 8px;outline:none;font-weight:500;resize:none;font-family:inherit;line-height:1.5;overflow:hidden;transition:border-color .15s,box-shadow .15s;}
+  tbody tr:nth-child(odd)  .notes-input{border-color:var(--row-odd-border);}
+  tbody tr:nth-child(even) .notes-input{border-color:var(--row-even-border);}
+  .notes-input:focus{border-color:#3a6bc4;box-shadow:0 0 0 2px rgba(58,107,196,.18);}
+  .notes-input::placeholder{color:var(--text3);font-weight:400;}
+
+  .cb-group{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding-top:4px;}
+  .cb-group label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;}
+  .cb-group input[type=radio]{width:14px;height:14px;cursor:pointer;}
+  tbody tr:nth-child(odd)  .cb-group input[type=radio]{accent-color:#3a6bc4;}
+  tbody tr:nth-child(even) .cb-group input[type=radio]{accent-color:#b07d1a;}
+
+  .sub-notes{margin-top:8px;}
+  .sub-note-wrap{border-radius:6px;padding:5px 8px;}
+  tbody tr:nth-child(odd)  .sub-note-wrap{background:var(--row-odd-note-bg);}
+  tbody tr:nth-child(even) .sub-note-wrap{background:var(--row-even-note-bg);}
+  .sub-note-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+  tbody tr:nth-child(odd)  .sub-note-label{color:var(--row-odd-note-text);}
+  tbody tr:nth-child(even) .sub-note-label{color:var(--row-even-note-text);}
+  .sub-note-input{width:100%;border:none;background:transparent;font-size:12px;color:var(--text);outline:none;resize:none;min-height:36px;font-family:inherit;line-height:1.4;}
+  .sub-note-input::placeholder{color:var(--text3);}
+
+  /* Save note buttons */
+  .note-actions{display:flex;gap:5px;margin-top:5px;}
+  .note-save-btn{font-size:10px;font-weight:700;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+  .note-save-btn:hover{opacity:.8;}
+  .btn-general{background:#3a6bc4;color:#fff;}
+  .btn-ai{background:#2a7a4f;color:#fff;}
+
+  .add-btn{margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .add-btn:hover{background:var(--surface2);}
+
+  /* Color section */
+  .color-section{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .color-card{background:var(--surface);border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .color-card h3{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text);}
+  .picker-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .pick-btn{display:flex;align-items:center;gap:6px;background:#3a3a3a;color:#fff;border:none;border-radius:7px;padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit;}
+  .pick-btn:hover{background:#555;}
+  .pick-btn:disabled{background:#aaa;cursor:not-allowed;}
+  .color-preview{width:28px;height:28px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);flex-shrink:0;}
+  .hex-val{font-size:12px;color:var(--text2);font-family:monospace;}
+  .color-list{display:flex;flex-direction:column;gap:6px;}
+  .color-tag{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);flex-wrap:wrap;}
+  .color-swatch{width:20px;height:20px;border-radius:4px;border:1px solid rgba(0,0,0,.1);flex-shrink:0;}
+  .color-name-fancy{font-weight:600;}
+  .color-name-simple{color:var(--text2);font-size:12px;font-weight:700;}
+  .fallback-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .fallback-input{border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:13px;width:100px;font-family:monospace;background:var(--surface);color:var(--text);}
+  .fallback-add{background:#3a3a3a;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;}
+
+  /* Summary */
+  .summary{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .sum-card{background:var(--surface);border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .sum-card h2{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text);}
+  .sum-cols{display:flex;flex-direction:column;gap:10px;}
+  .sum-col{background:var(--sum-col-bg);border-radius:8px;padding:10px;}
+  .sum-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid;}
+  .has-label{color:#2a7a4f;border-color:#2a7a4f;}
+  .partial-label{color:#a06b00;border-color:#a06b00;}
+  .not-label{color:#b03a2e;border-color:#b03a2e;}
+  .sum-item{font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .sum-item:last-child{border-bottom:none;}
+  .sum-item-title{display:flex;align-items:flex-start;gap:5px;font-weight:500;color:var(--text);word-break:break-word;}
+  .sum-item-subnote{font-size:11px;color:var(--text2);padding:4px 8px;margin-top:5px;margin-left:16px;word-break:break-word;background:var(--sum-note-bg);border-left:2px solid var(--sum-note-border);border-radius:0 4px 4px 0;line-height:1.4;}
+  .dot-yes{color:#2a7a4f;flex-shrink:0;}
+  .dot-no{color:#b03a2e;flex-shrink:0;}
+  .dot-partial{color:#a06b00;flex-shrink:0;}
+  .empty{font-size:12px;color:var(--text3);font-style:italic;}
+
+  /* AI Notes section in summary */
+  .ai-notes-section{margin-top:14px;border-top:2px solid var(--border);padding-top:10px;}
+  .ai-notes-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#2a7a4f;margin-bottom:8px;}
+  .ai-note-entry{background:var(--sum-note-bg);border-left:3px solid #2a7a4f;border-radius:0 6px 6px 0;padding:8px 10px;margin-bottom:8px;}
+  .ai-note-entry:last-child{margin-bottom:0;}
+  .ai-note-request{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;}
+  .ai-note-text{font-size:12px;color:var(--text);line-height:1.5;}
+
+  .reset-btn{margin-top:20px;background:var(--surface);border:1px solid #e0b0aa;border-radius:8px;padding:8px 20px;font-size:13px;color:#b03a2e;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .reset-btn:hover{background:#fdf0ef;}
+
+  /* Reference panel */
+  .ref-panel{display:none;position:fixed;top:44px;right:0;width:520px;max-width:95vw;height:calc(100vh - 44px);background:var(--ref-bg);box-shadow:-4px 0 24px rgba(0,0,0,.2);z-index:200;flex-direction:column;}
+  .ref-panel.open{display:flex;}
+  .ref-header{background:#2e2e2e;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .ref-header h2{font-size:14px;font-weight:700;}
+  .ref-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;}
+  .ref-inner{display:flex;flex:1;overflow:hidden;}
+  .ref-tabs{display:flex;flex-direction:column;width:140px;flex-shrink:0;background:var(--ref-tabs-bg);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0;gap:2px;}
+  .ref-tab{padding:9px 14px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-left:3px solid transparent;text-align:left;font-family:inherit;line-height:1.4;}
+  .ref-tab.active{color:var(--text);border-left:3px solid #3a6bc4;background:var(--ref-bg);}
+  .ref-tab:hover:not(.active){background:var(--surface2);color:var(--text);}
+  .ref-body{padding:16px 18px;overflow-y:auto;flex:1;}
+  .ref-panel-content{display:none;}
+  .ref-panel-content.active{display:block;}
+  .cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cs-item{background:var(--cs-item-bg);border-radius:8px;padding:10px 12px;border-left:3px solid #3a6bc4;}
+  .cs-item-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;}
+  .cs-item-example{font-size:11px;color:var(--text2);font-style:italic;line-height:1.4;}
+
+  /* User Guide */
+  .guide-section{margin-bottom:20px;}
+  .guide-section h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #3a6bc4;}
+  .guide-step{display:flex;gap:10px;margin-bottom:8px;font-size:12px;line-height:1.5;color:var(--text2);}
+  .guide-num{width:20px;height:20px;background:#3a6bc4;color:#fff;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .guide-tip{background:var(--cs-item-bg);border-left:3px solid #a06b00;border-radius:0 6px 6px 0;padding:8px 10px;font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px;}
+
+  .overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:199;}
+  .overlay-bg.open{display:block;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-label" id="themeLabel">Light Mode</span>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span class="toggle-icon">☀️</span>
+    <div class="toggle-track"><div class="toggle-knob"></div></div>
+    <span class="toggle-icon">🌙</span>
+  </button>
+</div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-title">Reference</span>
+    <button class="sidebar-toggle" onclick="toggleSidebar()">◀</button>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="sidebar-btn" id="sideBtn-visuals"      onclick="openPanel('visuals')"><span class="btn-icon">📋</span><span class="btn-label">Visual Quality</span></button>
+    <button class="sidebar-btn" id="sideBtn-if"           onclick="openPanel('if')"><span class="btn-icon">✅</span><span class="btn-label">Instruction Following</span></button>
+    <button class="sidebar-btn" id="sideBtn-correctness"  onclick="openPanel('correctness')"><span class="btn-icon">🔍</span><span class="btn-label">Correctness</span></button>
+    <button class="sidebar-btn" id="sideBtn-guide"        onclick="openPanel('guide')"><span class="btn-icon">📖</span><span class="btn-label">User Guide</span></button>
+  </nav>
+  <div class="calc-wrap">
+    <div class="calc-display">
+      <div class="calc-expr" id="calcExpr"></div>
+      <div class="calc-result" id="calcResult">0</div>
+    </div>
+    <div class="calc-grid">
+      <button class="calc-btn clr" onclick="calcClear()">C</button>
+      <button class="calc-btn clr" onclick="calcDel()">⌫</button>
+      <button class="calc-btn op"  onclick="calcInput('%')">%</button>
+      <button class="calc-btn op"  onclick="calcInput('/')">÷</button>
+      <button class="calc-btn"     onclick="calcInput('7')">7</button>
+      <button class="calc-btn"     onclick="calcInput('8')">8</button>
+      <button class="calc-btn"     onclick="calcInput('9')">9</button>
+      <button class="calc-btn op"  onclick="calcInput('*')">×</button>
+      <button class="calc-btn"     onclick="calcInput('4')">4</button>
+      <button class="calc-btn"     onclick="calcInput('5')">5</button>
+      <button class="calc-btn"     onclick="calcInput('6')">6</button>
+      <button class="calc-btn op"  onclick="calcInput('-')">−</button>
+      <button class="calc-btn"     onclick="calcInput('1')">1</button>
+      <button class="calc-btn"     onclick="calcInput('2')">2</button>
+      <button class="calc-btn"     onclick="calcInput('3')">3</button>
+      <button class="calc-btn op"  onclick="calcInput('+')">+</button>
+      <button class="calc-btn"     onclick="calcInput('+/-')">+/−</button>
+      <button class="calc-btn"     onclick="calcInput('0')">0</button>
+      <button class="calc-btn"     onclick="calcInput('.')">.</button>
+      <button class="calc-btn eq"  onclick="calcEquals()">=</button>
+    </div>
+  </div>
+</aside>
+
+<div class="overlay-bg" id="overlayBg" onclick="closePanel()"></div>
+<div class="ref-panel" id="refPanel">
+  <div class="ref-header"><h2 id="refTitle"></h2><button class="ref-close" onclick="closePanel()">✕</button></div>
+  <div class="ref-inner"><div class="ref-tabs" id="refTabs"></div><div class="ref-body" id="refBody"></div></div>
+</div>
+
+<main class="main">
+  <h1>Image Comparison Sheet</h1>
+  <table>
+    <thead><tr><th style="width:40%">Request</th><th class="center" style="width:30%">Image A</th><th class="center" style="width:30%">Image B</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <button class="add-btn" onclick="addRow()">+ Add row</button>
+
+  <div class="color-section">
+    <div class="color-card">
+      <h3>🎨 Image A — Color Picker</h3>
+      <div id="aFallback" style="display:none;"><div class="fallback-row"><input class="fallback-input" id="aFallbackInput" type="text" placeholder="#rrggbb" maxlength="7"/><button class="fallback-add" onclick="addFallbackColor('a')">Add</button></div></div>
+      <div class="picker-row"><button class="pick-btn" id="aPickBtn" onclick="pickColor('a')">🎨 Pick Color</button><div class="color-preview" id="aPreview"></div><span class="hex-val" id="aHex"></span></div>
+      <div class="color-list" id="aColorList"></div>
+    </div>
+    <div class="color-card">
+      <h3>🎨 Image B — Color Picker</h3>
+      <div id="bFallback" style="display:none;"><div class="fallback-row"><input class="fallback-input" id="bFallbackInput" type="text" placeholder="#rrggbb" maxlength="7"/><button class="fallback-add" onclick="addFallbackColor('b')">Add</button></div></div>
+      <div class="picker-row"><button class="pick-btn" id="bPickBtn" onclick="pickColor('b')">🎨 Pick Color</button><div class="color-preview" id="bPreview"></div><span class="hex-val" id="bHex"></span></div>
+      <div class="color-list" id="bColorList"></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card">
+      <h2>Image A</h2>
+      <div class="sum-cols">
+        <div class="sum-col"><div class="sum-section-label not-label">✗ Does Not Have</div><div id="aNot"></div></div>
+        <div class="sum-col"><div class="sum-section-label partial-label">◑ Partially Has</div><div id="aPartial"></div></div>
+        <div class="sum-col"><div class="sum-section-label has-label">✓ Has</div><div id="aHas"></div></div>
+      </div>
+      <div class="ai-notes-section" id="aAiSection" style="display:none;">
+        <div class="ai-notes-title">🤖 AI Issues</div>
+        <div id="aAiNotes"></div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <h2>Image B</h2>
+      <div class="sum-cols">
+        <div class="sum-col"><div class="sum-section-label not-label">✗ Does Not Have</div><div id="bNot"></div></div>
+        <div class="sum-col"><div class="sum-section-label partial-label">◑ Partially Has</div><div id="bPartial"></div></div>
+        <div class="sum-col"><div class="sum-section-label has-label">✓ Has</div><div id="bHas"></div></div>
+      </div>
+      <div class="ai-notes-section" id="bAiSection" style="display:none;">
+        <div class="ai-notes-title">🤖 AI Notes</div>
+        <div id="bAiNotes"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="resetAll()">↺ Reset</button>
+</main>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('themeLabel').textContent=t==='dark'?'Dark Mode':'Light Mode';try{localStorage.setItem('ics-theme',t);}catch(e){}}
+function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
+(function(){try{var s=localStorage.getItem('ics-theme');if(s)applyTheme(s);}catch(e){}})();
+
+// ── Sidebar ───────────────────────────────────────────────────
+var sidebarCollapsed=false;
+function toggleSidebar(){sidebarCollapsed=!sidebarCollapsed;var sb=document.getElementById('sidebar');sb.classList.toggle('collapsed',sidebarCollapsed);sb.querySelector('.sidebar-toggle').textContent=sidebarCollapsed?'▶':'◀';}
+
+// ── Calculator ────────────────────────────────────────────────
+var calcExpr='',calcJustEvaled=false;
+function calcDisplay(){var ex=document.getElementById('calcExpr'),re=document.getElementById('calcResult');var d=calcExpr.replace(/\*/g,'×').replace(/\//g,'÷');ex.textContent=d;if(!calcExpr){re.textContent='0';return;}try{var v=Function('"use strict";return('+calcExpr+')')();re.textContent=isFinite(v)?parseFloat(v.toFixed(10)):'Error';}catch(e){re.textContent=d;}}
+function calcInput(v){var ops=['+','-','*','/','%'];if(calcJustEvaled&&ops.indexOf(v)===-1)calcExpr='';calcJustEvaled=false;if(v==='+/-'){var m=calcExpr.match(/(.*[+\-*/]|^)([-]?\d*\.?\d+)$/);if(m)calcExpr=m[1]+(parseFloat(m[2])*-1).toString();calcDisplay();return;}if(v==='.'){var parts=calcExpr.split(/[+\-*/]/);if(parts[parts.length-1].indexOf('.')!==-1)return;if(parts[parts.length-1]==='')calcExpr+='0';}if(['+','-','*','/','%'].indexOf(v)!==-1){if(!calcExpr&&v!=='-')return;if(['+','-','*','/','%'].indexOf(calcExpr.slice(-1))!==-1)calcExpr=calcExpr.slice(0,-1);}calcExpr+=v;calcDisplay();}
+function calcEquals(){if(!calcExpr)return;try{var v=Function('"use strict";return('+calcExpr+')')();if(isFinite(v)){document.getElementById('calcExpr').textContent=calcExpr.replace(/\*/g,'×').replace(/\//g,'÷')+' =';calcExpr=parseFloat(v.toFixed(10)).toString();document.getElementById('calcResult').textContent=calcExpr;calcJustEvaled=true;}else document.getElementById('calcResult').textContent='Error';}catch(e){document.getElementById('calcResult').textContent='Error';}}
+function calcClear(){calcExpr='';calcJustEvaled=false;calcDisplay();}
+function calcDel(){if(calcJustEvaled){calcClear();return;}calcExpr=calcExpr.slice(0,-1);calcDisplay();}
+
+// ── Reference Data ────────────────────────────────────────────
+var cheatSheet={
+  'Sharpness & Focus':[
+    {term:'Sharp',ex:'The image is sharp, and facial details are clearly visible.'},
+    {term:'Crisp',ex:'The feathers appear crisp with excellent texture detail.'},
+    {term:'Soft',ex:'The image is slightly soft around the edges of the subject.'},
+    {term:'Blurry',ex:'The image appears blurry, particularly around the face.'},
+    {term:'Out of Focus',ex:'The subject is out of focus while the background appears sharper.'},
+  ],
+  'Exposure':[
+    {term:'Properly Exposed',ex:'The image is properly exposed and retains detail in both bright and dark areas.'},
+    {term:'Overexposed',ex:'The sky is overexposed and lacks visible cloud detail.'},
+    {term:'Underexposed',ex:"The subject's clothing is underexposed and difficult to see."},
+    {term:'Blown Highlights',ex:'The highlights on the white shirt are blown out.'},
+    {term:'Crushed Shadows',ex:'The shadows beneath the table are crushed and contain no visible detail.'},
+  ],
+  'Lighting':[
+    {term:'Natural Lighting',ex:'The natural lighting creates a realistic outdoor appearance.'},
+    {term:'Soft Lighting',ex:'Soft lighting creates flattering skin tones.'},
+    {term:'Harsh Lighting',ex:'Harsh lighting creates distracting shadows on the face.'},
+    {term:'Flat Lighting',ex:'Flat lighting causes the subject to blend into the background.'},
+    {term:'Well-Lit',ex:'The image is well-lit and easy to evaluate.'},
+    {term:'Poorly Lit',ex:'The scene is poorly lit, making details difficult to assess.'},
+  ],
+  'Contrast & Tonal Range':[
+    {term:'Strong Contrast',ex:'The strong contrast helps the subject stand out.'},
+    {term:'Low Contrast',ex:'The image appears dull due to low contrast.'},
+    {term:'Balanced Contrast',ex:'The image demonstrates balanced contrast throughout.'},
+    {term:'Muddy Tones',ex:'The background contains muddy tones with little separation.'},
+  ],
+  'Color':[
+    {term:'Accurate Color Balance',ex:'Skin tones exhibit accurate color balance.'},
+    {term:'Vibrant',ex:'The vibrant colors enhance visual appeal.'},
+    {term:'Muted',ex:'The muted palette creates a softer mood.'},
+    {term:'Oversaturated',ex:'The flowers appear oversaturated and unrealistic.'},
+    {term:'Undersaturated',ex:'The image looks undersaturated and lacks visual impact.'},
+    {term:'Color Cast',ex:'The image has a noticeable blue color cast.'},
+  ],
+  'Texture & Detail':[
+    {term:'Rich Texture',ex:'The wood grain exhibits rich texture.'},
+    {term:'Fine Detail',ex:'Fine detail is preserved in the hair.'},
+    {term:'Clean Rendering',ex:'The image demonstrates clean rendering throughout.'},
+    {term:'Artificial Smoothing',ex:'Artificial smoothing reduces skin texture.'},
+  ],
+  'Depth & Dimension':[
+    {term:'Good Depth',ex:'The image demonstrates good depth between foreground and background.'},
+    {term:'Strong Subject Separation',ex:'Strong subject separation draws attention to the focal point.'},
+    {term:'Shallow Depth of Field',ex:'The shallow depth of field effectively isolates the subject.'},
+    {term:'Flat Appearance',ex:'The scene appears flat due to limited depth cues.'},
+  ],
+  'Composition':[
+    {term:'Well-Composed',ex:'The image is well-composed with a clear focal point.'},
+    {term:'Balanced Framing',ex:'The balanced framing keeps attention on the subject.'},
+    {term:'Strong Focal Point',ex:'The strong focal point immediately draws the eye.'},
+    {term:'Awkward Crop',ex:"The awkward crop removes part of the subject's arm."},
+    {term:'Distracting Composition',ex:'The bright object in the background creates a distracting composition.'},
+  ],
+};
+var ifData={definition:'Did the model do what the prompt asked?',examples:[{prompt:'A portrait of a man in a blue coat. The response shows a man in a black coat.',verdict:'ERROR',reason:'The prompt specified blue and the model ignored it.'},{prompt:'A map of the Caribbean Sea with its islands labeled. The model shows a map but not all islands are correctly labeled.',verdict:'OK',reason:'The prompt asked for a map of the Caribbean with the islands labeled and that is what the model generated.'},{prompt:'A square Save-the-Date invitation for Juan & Mitchell with the text "Save the Date – October 13th!" The model creates the right shape but spells "Mitchell" as "Michelle" and October as "Octobre".',verdict:'ERROR',reason:'The model created the correct layout but since it asked for SPECIFIC names and dates, it failed that request.'},{prompt:'An image of a chess set with red and white pieces. The model creates a correct chess set but with black and white pieces.',verdict:'ERROR',reason:'The prompt specified red and white pieces and the model ignored the requirement.'},{prompt:"A bird's eye view of Times Square at night. The model creates the correct setting and view, but some buildings are misshapen and there are text errors on signage.",verdict:'OK',reason:'The model created the correct setting and time of day.'}]};
+var correctnessData={definition:'Is what the model created factually accurate?',examples:[{prompt:'A portrait of a man in a blue coat. The response shows a man in a black coat.',verdict:'OK',reason:'The image itself is accurate — the model just did not follow the color specified in the prompt.'},{prompt:'A map of the Caribbean Sea with its islands labeled. The model shows a map but not all islands are correctly labeled.',verdict:'ERROR',reason:'Some island labels are not factually accurate.'},{prompt:'A square Save-the-Date invitation for Juan & Mitchell with the text "Save the Date – October 13th!" The model creates the right shape but spells "Mitchell" as "Michelle" and October as "Octobre".',verdict:'ERROR',reason:'Some text (name and month) is misspelled.'},{prompt:'An image of a chess set with red and white pieces. The model creates a correct chess set but with black and white pieces.',verdict:'OK',reason:'Since the model produced a correct chess set, this is fine.'},{prompt:"A bird's eye view of Times Square at night. The model creates the correct setting and view, but some buildings are misshapen and there are text errors on signage.",verdict:'ERROR',reason:'The malformed buildings and text errors are correctness issues that need to be pointed out.'}]};
+
+var guideData=[
+  {title:'Getting Started',steps:['Type the thing you are checking into the Request field on the left side of each row. For example: "Subject is wearing a red hat."','For Image A and Image B, pick Yes, Partial, or No based on whether the image shows that thing.','Use the note fields under each image column to write down what you actually see. This is where you put your specific findings.']},
+  {title:'Saving Notes',steps:['After writing your finding in the note field, click Save Note to attach it to that request in the summary below.','Click Save AI Note to send it to the AI Notes section at the bottom of each image summary. This keeps your findings organized separately from the checklist.','AI Notes are good for longer observations that do not fit neatly into a yes or no answer.']},
+  {title:'Color Picker',steps:['Click the Pick Color button under Image A or Image B.','Click anywhere on your screen to sample that color. The tool will tell you the color name and a simpler version in parentheses.','A confidence score shows how close the match is. Exact means it matched very closely. Estimated means the color fell between known values.']},
+  {title:'Reference Panels',steps:['Click Visual Quality in the left sidebar to open a cheat sheet of photography terms with examples.','Click Instruction Following to see what counts as the model doing what was asked.','Click Correctness to see what counts as the model getting something factually right or wrong.']},
+  {title:'Calculator',steps:['The calculator lives at the bottom of the left sidebar.','It handles basic math: add, subtract, multiply, divide, and percentages.','Press C to clear everything. Press the backspace button to delete one character at a time.']},
+  {title:'Reset',steps:['The Reset button at the bottom of the page clears all rows, notes, color picks, and AI notes and starts fresh with 5 empty rows.']},
+  {title:'Light and Dark Mode',steps:['Toggle the switch in the top right corner to switch between light and dark mode. The tool remembers your choice the next time you open it.']},
+];
+
+// ── Panel ─────────────────────────────────────────────────────
+function openPanel(type){
+  var tabsEl=document.getElementById('refTabs'),bodyEl=document.getElementById('refBody'),titleEl=document.getElementById('refTitle');
+  tabsEl.innerHTML='';bodyEl.innerHTML='';
+  document.querySelectorAll('.sidebar-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('sideBtn-'+type).classList.add('active');
+
+  if(type==='visuals'){
+    titleEl.textContent='📋 Visual Quality Cheat Sheet';
+    var cats=Object.keys(cheatSheet);
+    cats.forEach(function(cat,i){
+      var tab=document.createElement('button');tab.className='ref-tab'+(i===0?' active':'');tab.textContent=cat;tab.onclick=function(){switchRefTab(cat);};tabsEl.appendChild(tab);
+      var panel=document.createElement('div');panel.className='ref-panel-content'+(i===0?' active':'');panel.dataset.cat=cat;
+      var grid=document.createElement('div');grid.className='cs-grid';
+      cheatSheet[cat].forEach(function(item){var d=document.createElement('div');d.className='cs-item';d.innerHTML='<div class="cs-item-title">'+item.term+'</div><div class="cs-item-example">"'+item.ex+'"</div>';grid.appendChild(d);});
+      panel.appendChild(grid);bodyEl.appendChild(panel);
+    });
+  } else if(type==='guide'){
+    titleEl.textContent='📖 User Guide';
+    guideData.forEach(function(sec,i){
+      var tab=document.createElement('button');tab.className='ref-tab'+(i===0?' active':'');tab.textContent=sec.title;tab.onclick=(function(idx){return function(){switchRefTab('guide'+idx);};})(i);tabsEl.appendChild(tab);
+      var panel=document.createElement('div');panel.className='ref-panel-content'+(i===0?' active':'');panel.dataset.cat='guide'+i;
+      var html='<div class="guide-section"><h3>'+sec.title+'</h3>';
+      sec.steps.forEach(function(s,si){html+='<div class="guide-step"><div class="guide-num">'+(si+1)+'</div><div>'+s+'</div></div>';});
+      if(i===0)html+='<div class="guide-tip">Tip: You can add more rows at any time using the Add Row button below the table.</div>';
+      html+='</div>';
+      panel.innerHTML=html;bodyEl.appendChild(panel);
+    });
+  } else {
+    var data=type==='if'?ifData:correctnessData;
+    titleEl.textContent=type==='if'?'✅ Instruction Following':'🔍 Correctness';
+    ['definition','examples'].forEach(function(label,i){
+      var tab=document.createElement('button');tab.className='ref-tab'+(i===0?' active':'');tab.textContent=label.charAt(0).toUpperCase()+label.slice(1);tab.onclick=(function(l){return function(){switchRefTab(l);};})(label);tabsEl.appendChild(tab);
+    });
+    var defPanel=document.createElement('div');defPanel.className='ref-panel-content active';defPanel.dataset.cat='definition';
+    defPanel.innerHTML='<div style="background:var(--cs-item-bg);border-radius:10px;padding:16px;border-left:3px solid #3a6bc4;font-size:14px;line-height:1.6;color:var(--text);">'+data.definition+'</div>';
+    bodyEl.appendChild(defPanel);
+    var exPanel=document.createElement('div');exPanel.className='ref-panel-content';exPanel.dataset.cat='examples';
+    data.examples.forEach(function(item){
+      var color=item.verdict==='ERROR'?'#b03a2e':'#2a7a4f',bg=item.verdict==='ERROR'?'#fdf0ef':'#f0faf4';
+      var d=document.createElement('div');d.style.marginBottom='12px';
+      d.innerHTML='<div style="background:var(--cs-item-bg);border-radius:10px;padding:12px 14px;border-left:3px solid #aaa;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Prompt Scenario</div><div style="font-size:13px;color:var(--text);margin-bottom:10px;line-height:1.5;">'+item.prompt+'</div><div style="display:flex;align-items:flex-start;gap:10px;background:'+bg+';border-radius:7px;padding:8px 12px;"><span style="font-size:12px;font-weight:800;color:'+color+';white-space:nowrap;">'+item.verdict+'</span><span style="font-size:12px;color:#444;line-height:1.5;">'+item.reason+'</span></div></div>';
+      exPanel.appendChild(d);
+    });
+    bodyEl.appendChild(exPanel);
+  }
+  document.getElementById('refPanel').classList.add('open');
+  document.getElementById('overlayBg').classList.add('open');
+}
+function switchRefTab(cat){
+  document.querySelectorAll('.ref-tab').forEach(function(t){t.classList.toggle('active',t.textContent.toLowerCase()===cat||t.textContent===cat);});
+  document.querySelectorAll('.ref-panel-content').forEach(function(p){p.classList.toggle('active',p.dataset.cat===cat);});
+}
+function closePanel(){document.getElementById('refPanel').classList.remove('open');document.getElementById('overlayBg').classList.remove('open');document.querySelectorAll('.sidebar-btn').forEach(function(b){b.classList.remove('active');});}
+
+// ── AI Notes store ────────────────────────────────────────────
+var aiNotes={a:[],b:[]};
+
+function saveNote(rowId,img){
+  var tr=document.getElementById('row'+rowId);
+  var reqTA=tr.querySelector('textarea.notes-input');
+  var tas=tr.querySelectorAll('textarea.sub-note-input');
+  var noteTA=img==='a'?tas[0]:tas[1];
+  var noteText=noteTA?noteTA.value.trim():'';
+  if(!noteText)return;
+  // Append to the sub-note-input area (already shown in summary via updateSummary)
+  updateSummary();
+}
+
+function saveAiNote(rowId,img){
+  var tr=document.getElementById('row'+rowId);
+  var reqTA=tr.querySelector('textarea.notes-input');
+  var tas=tr.querySelectorAll('textarea.sub-note-input');
+  var noteTA=img==='a'?tas[0]:tas[1];
+  var reqText=reqTA?reqTA.value.trim():'Row '+rowId;
+  var noteText=noteTA?noteTA.value.trim():'';
+  if(!noteText)return;
+  aiNotes[img].push({request:reqText,note:noteText});
+  renderAiNotes(img);
+}
+
+function renderAiNotes(img){
+  var el=document.getElementById(img+'AiNotes');
+  var sec=document.getElementById(img+'AiSection');
+  if(!aiNotes[img].length){sec.style.display='none';el.innerHTML='';return;}
+  sec.style.display='block';
+  el.innerHTML=aiNotes[img].map(function(n){
+    return '<div class="ai-note-entry">'
+      +'<div class="ai-note-request">'+n.request+'</div>'
+      +'<div class="ai-note-text">'+n.note+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Color DB ──────────────────────────────────────────────────
+var colorDB=[
+  [[0,0,0],'Black','Black'],[[255,255,255],'White','White'],[[128,128,128],'Gray','Gray'],
+  [[192,192,192],'Silver','Light Gray'],[[169,169,169],'Dark Gray','Gray'],
+  [[211,211,211],'Light Gray','Light Gray'],[[220,220,220],'Gainsboro','Light Gray'],
+  [[105,105,105],'Dim Gray','Dark Gray'],[[47,79,79],'Dark Slate Gray','Dark Gray'],
+  [[112,128,144],'Slate Gray','Blue-Gray'],[[119,136,153],'Light Slate Gray','Blue-Gray'],
+  [[245,245,245],'White Smoke','Off-White'],[[248,248,255],'Ghost White','Off-White'],
+  [[70,70,70],'Jet','Dark Gray'],[[54,54,54],'Onyx','Near Black'],
+  [[36,36,36],'Eerie Black','Near Black'],[[230,230,230],'Platinum','Light Gray'],
+  [[150,150,150],'Spanish Gray','Gray'],[[107,107,107],'Battleship Gray','Dark Gray'],
+  [[255,0,0],'Red','Red'],[[139,0,0],'Dark Red','Dark Red'],[[178,34,34],'Firebrick','Dark Red'],
+  [[165,42,42],'Brown','Brown'],[[220,20,60],'Crimson','Red'],[[205,92,92],'Indian Red','Light Red'],
+  [[240,128,128],'Light Coral','Light Red'],[[250,128,114],'Salmon','Salmon'],
+  [[233,150,122],'Dark Salmon','Salmon'],[[255,36,0],'Scarlet','Red'],
+  [[190,0,50],'Carmine','Dark Red'],[[153,0,0],'Barn Red','Dark Red'],
+  [[102,0,0],'Maroon','Dark Red'],[[176,48,96],'Maroon Rose','Dark Pink'],
+  [[227,66,52],'Vermilion','Red-Orange'],[[194,30,86],'Ruby','Dark Pink'],
+  [[155,17,30],'Burgundy','Dark Red'],[[128,0,32],'Oxblood','Dark Red'],
+  [[120,40,31],'Auburn','Dark Brown-Red'],[[255,79,79],'Red Salsa','Red'],
+  [[196,2,51],'Cadmium Red','Red'],[[225,0,60],'Rose Madder','Red'],
+  [[185,0,0],'Rosso Corsa','Dark Red'],[[215,0,64],'Carmine Red','Red'],
+  [[255,69,0],'Orange-Red','Orange-Red'],[[255,99,71],'Tomato','Orange-Red'],
+  [[255,127,80],'Coral','Orange'],[[255,140,0],'Dark Orange','Dark Orange'],
+  [[255,165,0],'Orange','Orange'],[[255,111,0],'Pumpkin','Orange'],
+  [[255,83,13],'Flame','Orange'],[[255,117,24],'Tangerine','Orange'],
+  [[229,170,112],'Harvest Gold','Orange'],[[204,85,0],'Burnt Orange','Dark Orange'],
+  [[210,125,45],'Ochre','Yellow-Brown'],[[205,127,50],'Bronze','Bronze'],
+  [[184,115,51],'Copper','Copper'],[[255,145,0],'Deep Saffron','Orange'],
+  [[255,102,0],'Persimmon','Orange'],[[255,255,0],'Yellow','Yellow'],
+  [[255,215,0],'Gold','Yellow'],[[255,200,0],'Saffron','Yellow-Orange'],
+  [[255,191,0],'Amber','Yellow-Orange'],[[240,230,140],'Khaki','Yellow'],
+  [[218,165,32],'Goldenrod','Yellow'],[[184,134,11],'Dark Goldenrod','Dark Yellow'],
+  [[189,183,107],'Dark Khaki','Khaki'],[[255,204,0],'Mikado Yellow','Yellow'],
+  [[241,196,15],'Sunflower','Yellow'],[[255,220,0],'Canary','Yellow'],
+  [[173,255,47],'Green-Yellow','Yellow-Green'],[[154,205,50],'Yellow-Green','Yellow-Green'],
+  [[196,215,2],'Rio Grande','Yellow-Green'],[[107,142,35],'Olive Drab','Yellow-Green'],
+  [[124,252,0],'Lawn Green','Yellow-Green'],[[127,255,0],'Chartreuse','Yellow-Green'],
+  [[85,107,47],'Dark Olive Green','Dark Green'],[[128,128,0],'Olive','Olive'],
+  [[100,130,70],'Moss Green','Olive Green'],[[138,154,91],'Sage','Olive Green'],
+  [[195,214,0],'Pear','Yellow-Green'],[[0,128,0],'Green','Green'],
+  [[0,255,0],'Lime','Bright Green'],[[0,100,0],'Dark Green','Dark Green'],
+  [[34,139,34],'Forest Green','Green'],[[46,139,87],'Sea Green','Green'],
+  [[60,179,113],'Medium Sea Green','Green'],[[32,178,170],'Light Sea Green','Teal'],
+  [[143,188,143],'Dark Sea Green','Light Green'],[[144,238,144],'Light Green','Light Green'],
+  [[152,251,152],'Pale Green','Light Green'],[[0,255,127],'Spring Green','Green'],
+  [[50,205,50],'Lime Green','Green'],[[0,168,119],'Jade','Green'],
+  [[80,200,120],'Emerald','Green'],[[0,158,96],'Shamrock','Green'],
+  [[19,136,8],'Kelly Green','Green'],[[0,106,78],'Bottle Green','Dark Green'],
+  [[147,197,114],'Pistachio','Light Green'],[[0,128,128],'Teal','Teal'],
+  [[0,139,139],'Dark Cyan','Dark Teal'],[[72,209,204],'Medium Turquoise','Turquoise'],
+  [[64,224,208],'Turquoise','Turquoise'],[[0,206,209],'Dark Turquoise','Turquoise'],
+  [[127,255,212],'Aquamarine','Aqua'],[[102,205,170],'Medium Aquamarine','Aqua'],
+  [[0,255,255],'Cyan','Cyan'],[[175,238,238],'Pale Turquoise','Light Teal'],
+  [[95,158,160],'Cadet Blue','Blue-Gray'],[[135,206,235],'Sky Blue','Sky Blue'],
+  [[0,0,255],'Blue','Blue'],[[0,0,139],'Dark Blue','Dark Blue'],
+  [[0,0,128],'Navy','Navy'],[[25,25,112],'Midnight Blue','Dark Blue'],
+  [[30,144,255],'Dodger Blue','Blue'],[[100,149,237],'Cornflower Blue','Blue'],
+  [[70,130,180],'Steel Blue','Blue'],[[176,224,230],'Powder Blue','Light Blue'],
+  [[173,216,230],'Light Blue','Light Blue'],[[176,196,222],'Light Steel Blue','Light Blue'],
+  [[0,74,127],'Prussian Blue','Dark Blue'],[[0,149,182],'Cerulean','Blue'],
+  [[0,71,171],'Cobalt Blue','Dark Blue'],[[68,114,196],'Sapphire','Blue'],
+  [[18,97,160],'Denim','Dark Blue'],[[52,152,219],'Peter River','Blue'],
+  [[30,95,154],'Lapis Lazuli','Dark Blue'],[[128,0,128],'Purple','Purple'],
+  [[148,0,211],'Dark Violet','Dark Purple'],[[138,43,226],'Blue Violet','Purple'],
+  [[75,0,130],'Indigo','Indigo'],[[72,61,139],'Dark Slate Blue','Dark Purple'],
+  [[106,90,205],'Slate Blue','Purple-Blue'],[[147,112,219],'Medium Purple','Purple'],
+  [[139,0,139],'Dark Magenta','Dark Purple'],[[153,50,204],'Dark Orchid','Purple'],
+  [[186,85,211],'Medium Orchid','Purple'],[[218,112,214],'Orchid','Light Purple'],
+  [[216,191,216],'Thistle','Light Purple'],[[221,160,221],'Plum','Purple'],
+  [[238,130,238],'Violet','Violet'],[[230,230,250],'Lavender','Lavender'],
+  [[120,81,169],'Royal Purple','Purple'],[[156,81,182],'Wisteria','Purple'],
+  [[227,11,93],'Razzmatazz','Red-Pink'],[[201,160,220],'Lilac','Light Purple'],
+  [[191,148,228],'Amethyst','Purple'],[[102,51,153],'Grape','Dark Purple'],
+  [[255,0,255],'Magenta','Magenta'],[[255,20,147],'Deep Pink','Hot Pink'],
+  [[255,105,180],'Hot Pink','Pink'],[[255,182,193],'Light Pink','Light Pink'],
+  [[255,192,203],'Pink','Pink'],[[219,112,147],'Pale Violet Red','Pink'],
+  [[199,21,133],'Medium Violet Red','Dark Pink'],[[252,90,141],'Flamingo','Pink'],
+  [[255,0,127],'Rose','Pink'],[[197,49,81],'Cerise','Dark Pink'],
+  [[255,143,171],'Carnation Pink','Light Pink'],[[255,0,144],'Fashion Fuchsia','Magenta'],
+  [[251,174,210],'Fairy Tale','Light Pink'],[[253,170,210],'Cotton Candy','Light Pink'],
+  [[210,180,140],'Tan','Tan'],[[222,184,135],'Burlywood','Tan'],
+  [[245,222,179],'Wheat','Beige'],[[244,164,96],'Sandy Brown','Sandy Brown'],
+  [[210,105,30],'Chocolate','Brown'],[[160,82,45],'Sienna','Brown'],
+  [[139,69,19],'Saddle Brown','Dark Brown'],[[205,133,63],'Peru','Brown'],
+  [[195,176,145],'Sandrift','Tan'],[[188,143,143],'Rosy Brown','Pink-Brown'],
+  [[150,111,51],'Raw Umber','Brown'],[[115,74,18],'Sepia','Dark Brown'],
+  [[101,67,33],'Chocolate Brown','Dark Brown'],[[199,143,79],'Caramel','Light Brown'],
+  [[119,85,57],'Coffee','Brown'],[[111,78,55],'Espresso','Dark Brown'],
+  [[134,96,54],'Walnut','Brown'],[[180,137,100],'Driftwood','Tan'],
+  [[255,228,196],'Bisque','Peach'],[[255,218,185],'Peach Puff','Peach'],
+  [[255,204,153],'Peach','Peach'],[[250,240,230],'Linen','Cream'],
+  [[250,235,215],'Antique White','Off-White'],[[245,245,220],'Beige','Beige'],
+  [[255,248,220],'Cornsilk','Cream'],[[255,228,181],'Moccasin','Peach'],
+  [[57,255,20],'Neon Green','Bright Green'],[[255,255,51],'Neon Yellow','Bright Yellow'],
+  [[0,114,206],'Process Blue','Blue'],[[255,198,0],'Pantone Yellow','Yellow'],
+  [[52,168,83],'Google Green','Green'],[[66,133,244],'Google Blue','Blue'],
+  [[251,188,5],'Google Yellow','Yellow'],[[234,67,53],'Google Red','Red'],
+  [[0,120,212],'Microsoft Blue','Blue'],[[255,185,0],'Microsoft Yellow','Yellow'],
+];
+
+function hexToRgb(hex){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join('');var n=parseInt(hex,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function colorDist(a,b){return Math.sqrt(2*(a[0]-b[0])*(a[0]-b[0])+4*(a[1]-b[1])*(a[1]-b[1])+3*(a[2]-b[2])*(a[2]-b[2]));}
+function hexToNames(hex){
+  var rgb=hexToRgb(hex),bestD=Infinity,fancy='Unknown',simple='';
+  colorDB.forEach(function(e){var d=colorDist(rgb,e[0]);if(d<bestD){bestD=d;fancy=e[1];simple=e[2];}});
+  var confidence=Math.max(0,Math.round(100-(bestD/160)*100));
+  var label=confidence>=90?'Exact':confidence>=70?'Close':confidence>=45?'Approx':'Estimated';
+  var confColor=confidence>=90?'#2a7a4f':confidence>=70?'#a06b00':confidence>=45?'#b03a2e':'#7a2a6f';
+  return{fancy:fancy,simple:simple,confidence:confidence,label:label,confColor:confColor};
+}
+
+var colorLists={a:[],b:[]};
+var eyedropperSupported=typeof EyeDropper!=='undefined';
+if(!eyedropperSupported){document.getElementById('aFallback').style.display='block';document.getElementById('bFallback').style.display='block';document.getElementById('aPickBtn').style.display='none';document.getElementById('bPickBtn').style.display='none';}
+function pickColor(img){var btn=document.getElementById(img==='a'?'aPickBtn':'bPickBtn');btn.disabled=true;btn.textContent='⏳ Picking...';new EyeDropper().open().then(function(r){addColorEntry(img,r.sRGBHex.toLowerCase());btn.disabled=false;btn.textContent='🎨 Pick Color';}).catch(function(){btn.disabled=false;btn.textContent='🎨 Pick Color';});}
+function addFallbackColor(img){var inp=document.getElementById(img==='a'?'aFallbackInput':'bFallbackInput');var hex=inp.value.trim().toLowerCase();if(!hex.startsWith('#'))hex='#'+hex;if(!/^#[0-9a-f]{6}$/i.test(hex)){alert('Enter a valid hex like #c4d702');return;}addColorEntry(img,hex);inp.value='';}
+function addColorEntry(img,hex){var names=hexToNames(hex);colorLists[img].push({hex:hex,fancy:names.fancy,simple:names.simple,confidence:names.confidence,label:names.label,confColor:names.confColor});document.getElementById(img==='a'?'aPreview':'bPreview').style.background=hex;document.getElementById(img==='a'?'aHex':'bHex').textContent=hex;renderColorList(img);}
+function renderColorList(img){var el=document.getElementById(img==='a'?'aColorList':'bColorList');el.innerHTML=colorLists[img].map(function(c){return'<div class="color-tag"><div class="color-swatch" style="background:'+c.hex+'"></div><span class="color-name-fancy">'+c.fancy+'</span>'+(c.simple?'<span class="color-name-simple">('+c.simple+')</span>':'')+'<span style="color:var(--text3);font-size:11px;font-family:monospace">'+c.hex+'</span><span style="font-size:10px;font-weight:700;color:'+c.confColor+';background:'+c.confColor+'18;border:1px solid '+c.confColor+'44;border-radius:4px;padding:1px 6px;">'+c.label+' '+c.confidence+'%</span></div>';}).join('');}
+
+// ── Rows ──────────────────────────────────────────────────────
+var rowCount=0;
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+
+function addRow(){
+  rowCount++;var id=rowCount;
+  var tr=document.createElement('tr');tr.id='row'+id;
+  tr.innerHTML=
+    '<td style="vertical-align:middle;"><textarea class="notes-input" rows="1" placeholder="Enter request..." oninput="autoResize(this);updateSummary()"></textarea></td>'
+    +'<td>'
+    +'<div class="cb-group"><label><input type="radio" name="a'+id+'" value="yes" onchange="updateSummary()"/> Yes</label><label><input type="radio" name="a'+id+'" value="partial" onchange="updateSummary()"/> Partial</label><label><input type="radio" name="a'+id+'" value="no" onchange="updateSummary()"/> No</label></div>'
+    +'<div class="sub-notes"><div class="sub-note-wrap"><div class="sub-note-label">Image A Notes</div>'
+    +'<textarea class="sub-note-input" placeholder="Findings for Image A..." oninput="updateSummary()"></textarea>'
+    +'<div class="note-actions"><button class="note-save-btn btn-general" onclick="saveNote('+id+',\'a\')">Save Note</button><button class="note-save-btn btn-ai" onclick="saveAiNote('+id+',\'a\')">Save AI Issue</button></div>'
+    +'</div></div>'
+    +'</td>'
+    +'<td>'
+    +'<div class="cb-group"><label><input type="radio" name="b'+id+'" value="yes" onchange="updateSummary()"/> Yes</label><label><input type="radio" name="b'+id+'" value="partial" onchange="updateSummary()"/> Partial</label><label><input type="radio" name="b'+id+'" value="no" onchange="updateSummary()"/> No</label></div>'
+    +'<div class="sub-notes"><div class="sub-note-wrap"><div class="sub-note-label">Image B Notes</div>'
+    +'<textarea class="sub-note-input" placeholder="Findings for Image B..." oninput="updateSummary()"></textarea>'
+    +'<div class="note-actions"><button class="note-save-btn btn-general" onclick="saveNote('+id+',\'b\')">Save Note</button><button class="note-save-btn btn-ai" onclick="saveAiNote('+id+',\'b\')">Save AI Issue</button></div>'
+    +'</div></div>'
+    +'</td>';
+  document.getElementById('rows').appendChild(tr);updateSummary();
+}
+
+function getRows(){return Array.from(document.querySelectorAll('#rows tr')).map(function(tr){var reqTA=tr.querySelector('textarea.notes-input');var tas=tr.querySelectorAll('textarea.sub-note-input');var aY=tr.querySelector('input[value=yes][name^=a]');var aP=tr.querySelector('input[value=partial][name^=a]');var aN=tr.querySelector('input[value=no][name^=a]');var bY=tr.querySelector('input[value=yes][name^=b]');var bP=tr.querySelector('input[value=partial][name^=b]');var bN=tr.querySelector('input[value=no][name^=b]');return{note:reqTA?reqTA.value.trim():'',a:aY&&aY.checked?'yes':aP&&aP.checked?'partial':aN&&aN.checked?'no':'',b:bY&&bY.checked?'yes':bP&&bP.checked?'partial':bN&&bN.checked?'no':'',aNotes:tas[0]?tas[0].value.trim():'',bNotes:tas[1]?tas[1].value.trim():''};});}
+function renderList(items){if(!items.length)return'<div class="empty">None</div>';return items.map(function(item){return'<div class="sum-item"><div class="sum-item-title"><span class="'+item.dc+'">'+item.sym+'</span>'+item.title+'</div>'+(item.sub?'<div class="sum-item-subnote">'+item.sub+'</div>':'')+'</div>';}).join('');}
+function updateSummary(){var rows=getRows();function mk(f,img,dc,sym){return rows.filter(function(r){return r[img]===f&&r.note;}).map(function(r){return{title:r.note,sub:r[img+'Notes'],dc:dc,sym:sym};});}document.getElementById('aNot').innerHTML=renderList(mk('no','a','dot-no','●'));document.getElementById('aPartial').innerHTML=renderList(mk('partial','a','dot-partial','◑'));document.getElementById('aHas').innerHTML=renderList(mk('yes','a','dot-yes','●'));document.getElementById('bNot').innerHTML=renderList(mk('no','b','dot-no','●'));document.getElementById('bPartial').innerHTML=renderList(mk('partial','b','dot-partial','◑'));document.getElementById('bHas').innerHTML=renderList(mk('yes','b','dot-yes','●'));}
+
+function resetAll(){
+  colorLists.a=[];colorLists.b=[];aiNotes.a=[];aiNotes.b=[];
+  ['a','b'].forEach(function(img){document.getElementById(img==='a'?'aColorList':'bColorList').innerHTML='';document.getElementById(img==='a'?'aPreview':'bPreview').style.background='var(--surface2)';document.getElementById(img==='a'?'aHex':'bHex').textContent='';document.getElementById(img+'AiNotes').innerHTML='';document.getElementById(img+'AiSection').style.display='none';});
+  rowCount=0;document.getElementById('rows').innerHTML='';
+  for(var i=0;i<5;i++)addRow();
+}
+
+for(var i=0;i<5;i++)addRow();
+</script>
+</body>
+</html>
